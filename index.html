@@ -1,0 +1,936 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
+  <title>Las Huellas de Ray</title>
+
+<style>
+  :root {
+  --bg1: #140b24;
+  --bg2: #2a1744;
+  --card: rgba(255,255,255,0.08);
+  --card-border: rgba(255,255,255,0.12);
+  --text: #f7fbff;
+  --muted: rgba(247,251,255,0.78);
+  --accent: #c9a7ff;
+  --accent-2: #ffd7e3;
+  --success: #b5f4c8;
+  --shadow: 0 18px 50px rgba(0,0,0,0.38);
+  --gap: 7px;
+  --pieceRadius: 12px;
+}
+
+* {
+  box-sizing: border-box;
+  -webkit-tap-highlight-color: transparent;
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+  width: 100%;
+  min-height: 100%;
+  overflow: hidden;
+  font-family: Arial, Helvetica, sans-serif;
+  color: var(--text);
+  background:
+    radial-gradient(circle at top, rgba(201, 167, 255, 0.20), transparent 30%),
+    radial-gradient(circle at bottom right, rgba(255, 190, 235, 0.16), transparent 28%),
+    linear-gradient(160deg, var(--bg1), var(--bg2));
+  touch-action: manipulation;
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+body {
+  height: 100dvh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding:
+    max(8px, env(safe-area-inset-top))
+    max(8px, env(safe-area-inset-right))
+    max(8px, env(safe-area-inset-bottom))
+    max(8px, env(safe-area-inset-left));
+}
+
+.sparkles,
+.sparkles::before,
+.sparkles::after {
+  position: fixed;
+  inset: 0;
+  content: "";
+  pointer-events: none;
+  background-repeat: repeat;
+  opacity: 0.3;
+  z-index: 0;
+}
+
+.sparkles {
+  background-image:
+    radial-gradient(circle at 12px 10px, rgba(255,255,255,0.8) 1px, transparent 2px),
+    radial-gradient(circle at 48px 42px, rgba(255,255,255,0.65) 1.2px, transparent 2px),
+    radial-gradient(circle at 90px 18px, rgba(255,255,255,0.55) 1px, transparent 2px);
+  background-size: 120px 90px;
+}
+
+.sparkles::before {
+  opacity: 0.14;
+  background-image:
+    radial-gradient(circle at 25px 28px, rgba(255,255,255,0.75) 1px, transparent 2px),
+    radial-gradient(circle at 70px 70px, rgba(255,255,255,0.5) 1px, transparent 2px);
+  background-size: 100px 100px;
+  animation: drift 16s linear infinite;
+}
+
+.sparkles::after {
+  opacity: 0.1;
+  background-image:
+    radial-gradient(circle at 40px 35px, rgba(255,215,233,0.85) 1.4px, transparent 2px),
+    radial-gradient(circle at 80px 10px, rgba(201,167,255,0.8) 1px, transparent 2px);
+  background-size: 110px 95px;
+  animation: drift 22s linear infinite reverse;
+}
+
+@keyframes drift {
+  from { transform: translateY(0); }
+  to { transform: translateY(22px); }
+}
+
+.app {
+  position: relative;
+  z-index: 1;
+  width: min(100%, 520px);
+  height: 100%;
+  max-height: 100%;
+  display: flex;
+}
+
+.card {
+  width: 100%;
+  height: 100%;
+  max-height: calc(100dvh - 16px);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  background: linear-gradient(180deg, rgba(255,255,255,0.1), rgba(255,255,255,0.06));
+  border: 1px solid var(--card-border);
+  border-radius: 24px;
+  padding: 12px;
+  box-shadow: var(--shadow);
+  backdrop-filter: blur(14px);
+}
+
+.game-header {
+  flex: 0 0 auto;
+  text-align: center;
+  margin-bottom: 8px;
+}
+
+.game-header h1 {
+  margin: 0;
+  font-size: clamp(1.25rem, 4.4vw, 1.9rem);
+  line-height: 1.05;
+  letter-spacing: -0.02em;
+}
+
+.game-header p {
+  margin: 5px auto 0;
+  max-width: 390px;
+  color: var(--muted);
+  font-size: clamp(0.78rem, 2.8vw, 0.92rem);
+  line-height: 1.25;
+}
+
+.top-row {
+  flex: 0 0 auto;
+  display: grid;
+  grid-template-columns: 68px 1fr;
+  gap: 10px;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.preview {
+  width: 68px;
+  aspect-ratio: 9 / 16;
+  border-radius: 14px;
+  background: url("puzzle.png") center/cover no-repeat;
+  border: 1px solid rgba(255,255,255,0.2);
+  box-shadow: 0 10px 20px rgba(0,0,0,0.22);
+  overflow: hidden;
+  position: relative;
+}
+
+.preview::after {
+  content: "Ray";
+  position: absolute;
+  left: 7px;
+  bottom: 7px;
+  font-size: 0.68rem;
+  padding: 3px 7px;
+  border-radius: 999px;
+  background: rgba(25,12,42,0.68);
+  border: 1px solid rgba(255,255,255,0.16);
+}
+
+.meta {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+}
+
+.stats {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.pill {
+  padding: 6px 9px;
+  border-radius: 999px;
+  background: rgba(255,255,255,0.08);
+  border: 1px solid rgba(255,255,255,0.08);
+  font-size: clamp(0.74rem, 2.6vw, 0.86rem);
+  color: var(--text);
+  line-height: 1.1;
+}
+
+.pill.soft {
+  color: var(--muted);
+}
+
+.board-wrap {
+  flex: 1 1 auto;
+  min-height: 0;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  margin: 2px 0 8px;
+}
+
+.board-frame {
+  height: 100%;
+  max-height: 100%;
+  max-width: 100%;
+  aspect-ratio: 9 / 16;
+  background: rgba(255,255,255,0.05);
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 18px;
+  padding: 7px;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.04);
+}
+
+.board {
+  height: 100%;
+  aspect-ratio: 9 / 16;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  grid-template-rows: repeat(4, 1fr);
+  gap: var(--gap);
+  touch-action: manipulation;
+}
+
+.tile {
+  position: relative;
+  border: none;
+  border-radius: var(--pieceRadius);
+  padding: 0;
+  margin: 0;
+  overflow: hidden;
+  background-color: #26153d;
+  background-image: url("puzzle.png");
+  background-repeat: no-repeat;
+  background-size: 300% 400%;
+  box-shadow: 0 8px 16px rgba(0,0,0,0.25);
+  transition: transform 0.12s ease, filter 0.2s ease, box-shadow 0.2s ease;
+  cursor: pointer;
+  -webkit-touch-callout: none;
+  touch-action: manipulation;
+}
+
+.tile::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(180deg, rgba(255,255,255,0.18), transparent 30%, rgba(0,0,0,0.08));
+  pointer-events: none;
+}
+
+.tile:active {
+  transform: scale(0.98);
+}
+
+.tile.empty {
+  background: linear-gradient(135deg, rgba(255,255,255,0.05), rgba(255,255,255,0.02));
+  box-shadow: inset 0 0 0 1px rgba(255,255,255,0.08);
+  cursor: default;
+}
+
+.tile.empty::after {
+  background:
+    radial-gradient(circle at center, rgba(201,167,255,0.16), transparent 45%),
+    linear-gradient(180deg, rgba(255,255,255,0.08), rgba(255,255,255,0.01));
+}
+
+.controls {
+  flex: 0 0 auto;
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 8px;
+  margin-top: 0;
+}
+
+.btn {
+  border: none;
+  min-height: 44px;
+  border-radius: 14px;
+  padding: 9px 10px;
+  font-size: clamp(0.82rem, 3vw, 0.95rem);
+  font-weight: 700;
+  cursor: pointer;
+  color: #1b0d2d;
+  background: linear-gradient(180deg, #eadcff, #c9a7ff);
+  box-shadow: 0 10px 20px rgba(0,0,0,0.18);
+  transition: transform 0.12s ease, filter 0.2s ease;
+  touch-action: manipulation;
+}
+
+.btn.secondary {
+  background: linear-gradient(180deg, #f5e6ff, #ddb7ff);
+}
+
+.btn:active,
+.start-btn:active {
+  transform: scale(0.985);
+}
+
+.message {
+  flex: 0 0 auto;
+  min-height: 22px;
+  max-height: 58px;
+  overflow: hidden;
+  margin-top: 7px;
+  font-size: clamp(0.76rem, 2.8vw, 0.92rem);
+  font-weight: 600;
+  color: var(--success);
+  line-height: 1.25;
+  text-align: center;
+}
+
+.message strong {
+  color: #ffffff;
+}
+
+.footer-note {
+  flex: 0 0 auto;
+  margin-top: 5px;
+  font-size: clamp(0.68rem, 2.4vw, 0.8rem);
+  line-height: 1.2;
+  text-align: center;
+  color: rgba(247,251,255,0.68);
+}
+
+.overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 10;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 14px;
+  background: rgba(3,8,15,0.68);
+  backdrop-filter: blur(8px);
+  overflow: hidden;
+}
+
+.overlay-card {
+  width: min(100%, 430px);
+  max-height: calc(100dvh - 28px);
+  overflow: auto;
+  border-radius: 24px;
+  padding: 20px 16px;
+  background: linear-gradient(180deg, rgba(39,22,64,0.96), rgba(20,10,35,0.96));
+  border: 1px solid rgba(255,255,255,0.1);
+  box-shadow: var(--shadow);
+  text-align: center;
+}
+
+.overlay-card h2 {
+  margin: 0 0 10px;
+  font-size: clamp(1.25rem, 5vw, 1.75rem);
+}
+
+.overlay-card p {
+  margin: 0 0 16px;
+  color: var(--muted);
+  line-height: 1.45;
+  font-size: clamp(0.88rem, 3.2vw, 1rem);
+  white-space: pre-line;
+}
+
+.start-btn {
+  width: 100%;
+  min-height: 50px;
+  border: none;
+  border-radius: 15px;
+  background: linear-gradient(180deg, #cff0dc, #86d8a7);
+  color: #0a2013;
+  font-weight: 800;
+  font-size: 0.96rem;
+  cursor: pointer;
+  box-shadow: 0 12px 24px rgba(0,0,0,0.18);
+  transition: transform 0.12s ease, filter 0.2s ease;
+  touch-action: manipulation;
+}
+
+.win-burst {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 5;
+  opacity: 0;
+  transition: opacity 0.25s ease;
+  background:
+    radial-gradient(circle at 20% 30%, rgba(255,255,255,0.6) 0 2px, transparent 3px),
+    radial-gradient(circle at 70% 25%, rgba(255,215,233,0.8) 0 3px, transparent 4px),
+    radial-gradient(circle at 40% 70%, rgba(201,167,255,0.8) 0 3px, transparent 4px),
+    radial-gradient(circle at 80% 60%, rgba(255,255,255,0.75) 0 2px, transparent 3px);
+  animation: celebrate 1s ease infinite;
+}
+
+.win-burst.show {
+  opacity: 0.8;
+}
+
+@keyframes celebrate {
+  0% { transform: scale(1) translateY(0); }
+  50% { transform: scale(1.02) translateY(-4px); }
+  100% { transform: scale(1) translateY(0); }
+}
+
+.hidden {
+  display: none !important;
+}
+
+/* Celulares angostos */
+@media (max-width: 430px) {
+  :root {
+    --gap: 5px;
+    --pieceRadius: 9px;
+  }
+
+  body {
+    padding: 6px;
+  }
+
+  .card {
+    max-height: calc(100dvh - 12px);
+    padding: 9px;
+    border-radius: 20px;
+  }
+
+  .game-header {
+    margin-bottom: 6px;
+  }
+
+  .game-header h1 {
+    font-size: 1.32rem;
+  }
+
+  .game-header p {
+    font-size: 0.76rem;
+    line-height: 1.18;
+  }
+
+  .top-row {
+    grid-template-columns: 54px 1fr;
+    gap: 8px;
+    margin-bottom: 6px;
+  }
+
+  .preview {
+    width: 54px;
+    border-radius: 12px;
+  }
+
+  .preview::after {
+    font-size: 0.58rem;
+    padding: 2px 6px;
+    left: 5px;
+    bottom: 5px;
+  }
+
+  .meta {
+    gap: 5px;
+  }
+
+  .stats {
+    gap: 5px;
+  }
+
+  .pill {
+    padding: 5px 7px;
+    font-size: 0.7rem;
+  }
+
+  .board-wrap {
+    margin: 1px 0 6px;
+  }
+
+  .board-frame {
+    padding: 6px;
+    border-radius: 16px;
+  }
+
+  .controls {
+    gap: 7px;
+  }
+
+  .btn {
+    min-height: 40px;
+    border-radius: 13px;
+    padding: 8px;
+    font-size: 0.82rem;
+  }
+
+  .message {
+    margin-top: 5px;
+    min-height: 18px;
+    max-height: 42px;
+    font-size: 0.74rem;
+    line-height: 1.18;
+  }
+
+  .footer-note {
+    margin-top: 4px;
+    font-size: 0.66rem;
+    line-height: 1.15;
+  }
+}
+
+/* Celulares bajitos: sacrificamos texto para que quepa el juego completo */
+@media (max-height: 740px) and (orientation: portrait) {
+  .game-header p {
+    display: none;
+  }
+
+  .footer-note {
+    font-size: 0.62rem;
+  }
+
+  .message {
+    max-height: 34px;
+  }
+
+  .btn {
+    min-height: 38px;
+  }
+}
+
+/* Muy bajitos: aquí sí ocultamos footer para que nunca haya scroll */
+@media (max-height: 650px) and (orientation: portrait) {
+  .footer-note {
+    display: none;
+  }
+
+  .top-row {
+    grid-template-columns: 48px 1fr;
+  }
+
+  .preview {
+    width: 48px;
+  }
+
+  .message {
+    max-height: 30px;
+  }
+}
+
+/* Landscape */
+@media (orientation: landscape) and (max-height: 560px) {
+  body {
+    padding: 6px;
+  }
+
+  .app {
+    width: min(100%, 760px);
+  }
+
+  .card {
+    max-height: calc(100dvh - 12px);
+    padding: 8px;
+    border-radius: 18px;
+  }
+
+  .game-header {
+    display: none;
+  }
+
+  .top-row {
+    grid-template-columns: 52px 1fr;
+    margin-bottom: 5px;
+  }
+
+  .preview {
+    width: 52px;
+  }
+
+  .board-wrap {
+    margin: 0 0 6px;
+  }
+
+  .controls {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .btn,
+  .start-btn {
+    min-height: 36px;
+  }
+
+  .message {
+    margin-top: 5px;
+    max-height: 28px;
+    font-size: 0.72rem;
+  }
+
+  .footer-note {
+    display: none;
+  }
+}
+</style>
+</head>
+
+<body>
+  <div class="sparkles"></div>
+  <div class="win-burst" id="winBurst"></div>
+
+  <div class="overlay" id="startOverlay">
+    <div class="overlay-card">
+      <h2>Para ti, con todo mi amor.</h2>
+      <p>Sé cuánto amabas a Ray y cuánto duele despedirse de alguien que fue familia, compañía y hogar.
+
+Pero quiero que sepas algo: Ray está bien.
+
+Ahora corre libre, sin dolor, entre la nieve y las estrellas, llevando consigo todo el amor que le diste.
+
+Y aunque ya no puedas abrazarlo como antes, una parte de él siempre caminará contigo.</p>
+
+      <button id="startBtn" class="start-btn" type="button">Comenzar el viaje</button>
+    </div>
+  </div>
+
+  <div class="overlay hidden" id="endOverlay">
+    <div class="overlay-card">
+      <h2>Ray llegó a casa ✨</h2>
+      <p>Gracias por acompañarlo en este pequeño viaje.
+
+Ray no termina aquí; vive en cada recuerdo, en cada sonrisa y en todo el amor que dejó.
+
+Ahora corre libre entre la nieve y las estrellas, feliz, tranquilo y sin dolor.</p>
+
+      <button id="playAgainBtn" class="start-btn" type="button">Volver a jugar</button>
+    </div>
+  </div>
+
+  <main class="app">
+    <section class="card">
+
+      <div class="game-header">
+        <h1>Las Huellas de Ray</h1>
+        <p>Un pequeño viaje hecho con amor, para recordar a quien dejó huellitas eternas.</p>
+      </div>
+
+      <div class="top-row">
+        <div class="preview" aria-label="Vista previa de la imagen objetivo"></div>
+
+        <div class="meta">
+          <div class="stats">
+            <div class="pill" id="movesLabel">Movimientos: 0</div>
+            <div class="pill" id="statusLabel">En juego</div>
+          </div>
+
+          <div class="stats">
+            <div class="pill soft">12 huellitas</div>
+            <div class="pill soft">Para ti, en memoria de Ray.</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="board-wrap">
+        <div class="board-frame">
+          <div class="board" id="board"></div>
+        </div>
+      </div>
+
+      <div class="controls">
+        <button class="btn" id="shuffleBtn" type="button">Nuevo camino</button>
+        <button class="btn secondary" id="musicBtn" type="button">Volver a escuchar</button>
+      </div>
+
+      <div class="message" id="message"></div>
+
+      <div class="footer-note">
+        Hecho con amor para Ray, un alma noble que siempre caminará contigo.
+      </div>
+
+      <audio id="bgMusic" playsinline preload="auto">
+        <source src="musica.mp3" type="audio/mpeg" />
+      </audio>
+    </section>
+  </main>
+
+  <script>
+    const COLS = 3;
+    const ROWS = 4;
+    const TOTAL = COLS * ROWS;
+
+    const boardEl = document.getElementById("board");
+    const movesLabel = document.getElementById("movesLabel");
+    const statusLabel = document.getElementById("statusLabel");
+    const messageEl = document.getElementById("message");
+    const shuffleBtn = document.getElementById("shuffleBtn");
+    const musicBtn = document.getElementById("musicBtn");
+    const startBtn = document.getElementById("startBtn");
+    const startOverlay = document.getElementById("startOverlay");
+    const endOverlay = document.getElementById("endOverlay");
+    const playAgainBtn = document.getElementById("playAgainBtn");
+    const bgMusic = document.getElementById("bgMusic");
+    const winBurst = document.getElementById("winBurst");
+
+    let tiles = [];
+    let moves = 0;
+    let completed = false;
+    let started = false;
+
+    function createSolvedTiles() {
+      const arr = [];
+
+      for (let i = 0; i < TOTAL - 1; i++) {
+        arr.push(i);
+      }
+
+      arr.push(null);
+      return arr;
+    }
+
+    function renderBoard() {
+      boardEl.innerHTML = "";
+
+      tiles.forEach((tile, index) => {
+        const btn = document.createElement("button");
+        btn.className = "tile";
+        btn.type = "button";
+
+        if (tile === null) {
+          btn.classList.add("empty");
+          btn.disabled = true;
+          btn.setAttribute("aria-label", "Espacio vacío");
+        } else {
+          const row = Math.floor(tile / COLS);
+          const col = tile % COLS;
+
+          btn.style.backgroundPosition = `${(col / (COLS - 1)) * 100}% ${(row / (ROWS - 1)) * 100}%`;
+          btn.setAttribute("aria-label", `Pieza ${tile + 1}`);
+
+          btn.addEventListener("pointerup", (e) => {
+            e.preventDefault();
+            moveTile(index);
+          });
+        }
+
+        boardEl.appendChild(btn);
+      });
+
+      movesLabel.textContent = `Movimientos: ${moves}`;
+      statusLabel.textContent = completed ? "Completado" : "En juego";
+    }
+
+    function getNeighbors(emptyIndex) {
+      const result = [];
+      const row = Math.floor(emptyIndex / COLS);
+      const col = emptyIndex % COLS;
+
+      if (row > 0) result.push(emptyIndex - COLS);
+      if (row < ROWS - 1) result.push(emptyIndex + COLS);
+      if (col > 0) result.push(emptyIndex - 1);
+      if (col < COLS - 1) result.push(emptyIndex + 1);
+
+      return result;
+    }
+
+    function moveTile(index) {
+      if (!started || completed) return;
+
+      const emptyIndex = tiles.indexOf(null);
+      const neighbors = getNeighbors(emptyIndex);
+
+      if (!neighbors.includes(index)) return;
+
+      [tiles[index], tiles[emptyIndex]] = [tiles[emptyIndex], tiles[index]];
+
+      moves++;
+
+      renderBoard();
+      checkWin();
+    }
+
+    function checkWin() {
+      const solved = createSolvedTiles();
+      const win = tiles.every((value, index) => value === solved[index]);
+
+      if (win) {
+        completed = true;
+
+        statusLabel.textContent = "Ray llegó a casa";
+        messageEl.innerHTML = `
+          <strong>Ray llegó a casa.</strong><br>
+          Su amor sigue vivo en cada recuerdo, en cada huellita que dejó y en cada pedacito de felicidad que compartió contigo.<br>
+          Ahora corre libre entre la nieve y las estrellas, en paz, feliz y sin dolor. ✨
+        `;
+
+        winBurst.classList.add("show");
+
+        bgMusic.pause();
+        bgMusic.currentTime = 0;
+
+        setTimeout(() => {
+          endOverlay.classList.remove("hidden");
+        }, 900);
+      }
+    }
+
+    function shuffleBoardByMoves(steps = 180) {
+      tiles = createSolvedTiles();
+
+      let emptyIndex = tiles.indexOf(null);
+      let previousIndex = -1;
+
+      for (let i = 0; i < steps; i++) {
+        let options = getNeighbors(emptyIndex);
+
+        if (previousIndex !== -1 && options.length > 1) {
+          options = options.filter(index => index !== previousIndex);
+        }
+
+        const randomIndex = options[Math.floor(Math.random() * options.length)];
+
+        [tiles[randomIndex], tiles[emptyIndex]] = [tiles[emptyIndex], tiles[randomIndex]];
+
+        previousIndex = emptyIndex;
+        emptyIndex = randomIndex;
+      }
+
+      const isSolved = tiles.every((value, index) => value === createSolvedTiles()[index]);
+
+      if (isSolved) {
+        shuffleBoardByMoves(steps + 10);
+        return;
+      }
+
+      moves = 0;
+      completed = false;
+
+      messageEl.textContent = "";
+      winBurst.classList.remove("show");
+
+      renderBoard();
+    }
+
+    async function playMusic() {
+      try {
+        bgMusic.currentTime = 0;
+        await bgMusic.play();
+      } catch (error) {
+        console.log("Audio bloqueado por el navegador:", error);
+      }
+    }
+
+    function startGame() {
+      started = true;
+      startOverlay.classList.add("hidden");
+
+      shuffleBoardByMoves();
+
+      statusLabel.textContent = "En juego";
+      messageEl.textContent = "Acomoda las huellitas de Ray para acompañarlo en este pequeño viaje. 💜";
+
+      playMusic();
+    }
+
+    function restartMusic() {
+      if (!started) return;
+
+      bgMusic.currentTime = 0;
+      bgMusic.play().catch(() => {});
+
+      statusLabel.textContent = "Volviendo a escuchar";
+      messageEl.textContent = "La música vuelve a empezar, como las huellitas de Ray: siempre presentes, siempre llenas de amor. 💜";
+    }
+
+    function handleSongEnded() {
+      if (!started || completed) return;
+
+      shuffleBoardByMoves();
+
+      statusLabel.textContent = "Ray vuelve a correr";
+      messageEl.textContent = "Ray vuelve a correr una vez más entre la nieve y las estrellas. Cada nuevo intento es otra huellita de amor en su memoria. 💜";
+
+      setTimeout(() => {
+        if (started && !completed) {
+          playMusic();
+        }
+      }, 250);
+    }
+
+    startBtn.addEventListener("pointerup", (e) => {
+      e.preventDefault();
+      startGame();
+    });
+
+    shuffleBtn.addEventListener("pointerup", (e) => {
+      e.preventDefault();
+
+      if (!started) return;
+
+      shuffleBoardByMoves();
+
+      statusLabel.textContent = "Nuevo camino";
+      messageEl.textContent = "Cada camino vuelve a llevar a Ray a un recuerdo lleno de amor. 💜";
+
+      playMusic();
+    });
+
+    musicBtn.addEventListener("pointerup", (e) => {
+      e.preventDefault();
+      restartMusic();
+    });
+
+    playAgainBtn.addEventListener("pointerup", (e) => {
+      e.preventDefault();
+
+      endOverlay.classList.add("hidden");
+
+      shuffleBoardByMoves();
+
+      statusLabel.textContent = "Nuevo camino";
+      messageEl.textContent = "Ray vuelve a correr una vez más entre la nieve y las estrellas. 💜";
+
+      playMusic();
+    });
+
+    bgMusic.addEventListener("ended", handleSongEnded);
+
+    document.addEventListener("gesturestart", (e) => e.preventDefault());
+    document.addEventListener("dblclick", (e) => e.preventDefault(), { passive: false });
+    document.addEventListener("dragstart", (e) => e.preventDefault());
+
+    tiles = createSolvedTiles();
+    renderBoard();
+  </script>
+</body>
+</html>
